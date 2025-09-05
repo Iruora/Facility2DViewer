@@ -172,9 +172,9 @@ export default function FacilityPlan() {
   };
 
   return (
-    <div className="h-screen w-screen flex">
+    <div className="h-screen w-screen flex p-8">
       {/* Floor Plan */}
-      <div className="flex-1">
+      <div className="flex-1 border border-gray-300 rounded-lg shadow-lg bg-white mr-4">
         <svg
           ref={svgRef}
           viewBox={viewBox}
@@ -222,7 +222,7 @@ export default function FacilityPlan() {
       </div>
 
       {/* Side Panel */}
-      <div className="w-80 border-l border-gray-300 p-4 bg-gray-50">
+      <div className="w-80 border border-gray-300 rounded-lg shadow-lg p-4 bg-gray-50">
         <h2 className="text-lg font-bold mb-4">Room Details</h2>
 
         {selectedRoom ? (
