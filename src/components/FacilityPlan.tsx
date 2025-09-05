@@ -171,13 +171,31 @@ export default function FacilityPlan() {
     setIsPanning(false);
   };
 
+  const zoomIn = () => {
+    const [x, y, width, height] = viewBox.split(' ').map(Number);
+    const newWidth = width * 0.8;
+    const newHeight = height * 0.8;
+    const newX = x + (width - newWidth) / 2;
+    const newY = y + (height - newHeight) / 2;
+    setViewBox(`${newX} ${newY} ${newWidth} ${newHeight}`);
+  };
+
+  const zoomOut = () => {
+    const [x, y, width, height] = viewBox.split(' ').map(Number);
+    const newWidth = width * 1.25;
+    const newHeight = height * 1.25;
+    const newX = x - (newWidth - width) / 2;
+    const newY = y - (newHeight - height) / 2;
+    setViewBox(`${newX} ${newY} ${newWidth} ${newHeight}`);
+  };
+
   const resetView = () => {
     setViewBox("0 0 285.43249 257.8024");
     setSelectedRoom(null);
   };
 
   return (
-    <div className="h-screen w-screen flex p-8" style={{ margin: '8rem' }}>
+    <div className="h-screen w-screen flex p-8">
       {/* Floor Plan */}
       <div className="flex-1 border-2 border-gray-400 rounded-lg shadow-xl bg-gray-50 mr-4 p-4">
         <svg
@@ -226,15 +244,28 @@ export default function FacilityPlan() {
             })}
           </g>
         </svg>
+      </div>
 
-        {selectedRoom && (
-          <button
-            className="absolute top-2 right-2 bg-white border border-gray-300 px-3 py-1 rounded-lg shadow hover:bg-gray-100"
-            onClick={resetView}
-          >
-            Reset View
-          </button>
-        )}
+      {/* Floating Zoom Controls */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50 p-4 bg-white rounded-2xl shadow-xl m-5" style={{ margin: '20px' }}>
+        <button
+          className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 rounded-full shadow-lg flex items-center justify-center text-xl font-bold text-white hover:shadow-xl transition-all transform hover:scale-105"
+          onClick={zoomIn}
+        >
+          +
+        </button>
+        <button
+          className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 rounded-full shadow-lg flex items-center justify-center text-xl font-bold text-white hover:shadow-xl transition-all transform hover:scale-105"
+          onClick={zoomOut}
+        >
+          −
+        </button>
+        <button
+          className="w-14 h-14 bg-gradient-to-br from-gray-400 to-gray-600 hover:from-gray-500 hover:to-gray-700 rounded-full shadow-lg flex items-center justify-center text-lg font-bold text-white hover:shadow-xl transition-all transform hover:scale-105"
+          onClick={resetView}
+        >
+          ⌂
+        </button>
       </div>
 
       {/* Side Panel */}
