@@ -34,8 +34,9 @@ export default function FacilityPlan() {
     const bbox = getRoomBBox(roomId);
     if (bbox) {
       const padding = 20;
-      const x = bbox.x - padding;
-      const y = bbox.y - padding;
+      // Account for the transform="translate(95.52219,-1.1547294)"
+      const x = bbox.x + 95.52219 - padding;
+      const y = bbox.y - 1.1547294 - padding;
       const width = bbox.width + padding * 2;
       const height = bbox.height + padding * 2;
 
