@@ -26,6 +26,7 @@ export default function FacilityPlan() {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [viewBoxStart, setViewBoxStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [hasDragged, setHasDragged] = useState(false);
+  const [flashingRoom, setFlashingRoom] = useState<string | null>(null);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -45,6 +46,10 @@ export default function FacilityPlan() {
       const height = bbox.height + padding * 2;
 
       setViewBox(`${x} ${y} ${width} ${height}`);
+      
+      // Flash the selected room
+      setFlashingRoom(roomId);
+      setTimeout(() => setFlashingRoom(null), 1000);
     }
   };
 
@@ -172,9 +177,9 @@ export default function FacilityPlan() {
   };
 
   return (
-    <div className="h-screen w-screen flex p-8">
+    <div className="h-screen w-screen flex p-8" style={{ margin: '8rem' }}>
       {/* Floor Plan */}
-      <div className="flex-1 border border-gray-300 rounded-lg shadow-lg bg-white mr-4">
+      <div className="flex-1 border-2 border-gray-400 rounded-lg shadow-xl bg-gray-50 mr-4 p-4">
         <svg
           ref={svgRef}
           viewBox={viewBox}
@@ -193,14 +198,25 @@ export default function FacilityPlan() {
           <g transform="translate(95.52219,-1.1547294)">
             {rooms.map(room => {
               const isHovered = hoveredRoom === room.id;
+              const isFlashing = flashingRoom === room.id;
+              const isSelected = selectedRoom?.id === room.id;
+              
+              let fillColor = "#D1D5DB";
+              if (isSelected) fillColor = "#10B981";
+              else if (isHovered) fillColor = "#60A5FA";
+              
               return (
                 <path
                   key={room.id}
                   id={room.id}
-                  fill={isHovered ? "#60A5FA" : "#D1D5DB"}
+                  fill={fillColor}
                   stroke="#000000"
                   strokeWidth="0.529696"
-                  style={{ cursor: "pointer", transition: "fill 0.2s ease-in-out" }}
+                  style={{ 
+                    cursor: "pointer", 
+                    transition: "fill 0.2s ease-in-out",
+                    animation: isFlashing ? "flash 1s ease-in-out" : "none"
+                  }}
                   onMouseEnter={() => setHoveredRoom(room.id)}
                   onMouseLeave={() => setHoveredRoom(null)}
                   onClick={() => handleRoomClick(room.id)}
