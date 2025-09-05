@@ -22,6 +22,10 @@ export default function FacilityPlan() {
   const [selectedRoom, setSelectedRoom] = useState<RoomInfo | null>(null);
   const [rooms] = useState<RoomInfo[]>(roomIds.map(id => ({ id, name: id.replace(/_/g, ' ') })));
   const [viewBox, setViewBox] = useState<string>("0 0 285.43249 257.8024");
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [viewBoxStart, setViewBoxStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [hasDragged, setHasDragged] = useState(false);
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -130,20 +134,62 @@ export default function FacilityPlan() {
     return paths[roomId] || "";
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 0) {
+      setIsPanning(true);
+      setHasDragged(false);
+      setPanStart({ x: e.clientX, y: e.clientY });
+      const [x, y, width, height] = viewBox.split(' ').map(Number);
+      setViewBoxStart({ x, y, width, height });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    
+    const dx = Math.abs(e.clientX - panStart.x);
+    const dy = Math.abs(e.clientY - panStart.y);
+    
+    if (dx > 3 || dy > 3) {
+      setHasDragged(true);
+      const deltaX = (e.clientX - panStart.x) * (viewBoxStart.width / (svgRef.current?.clientWidth || 1));
+      const deltaY = (e.clientY - panStart.y) * (viewBoxStart.height / (svgRef.current?.clientHeight || 1));
+      
+      const newX = viewBoxStart.x - deltaX;
+      const newY = viewBoxStart.y - deltaY;
+      
+      setViewBox(`${newX} ${newY} ${viewBoxStart.width} ${viewBoxStart.height}`);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
   const resetView = () => {
     setViewBox("0 0 285.43249 257.8024");
     setSelectedRoom(null);
   };
 
   return (
-    <div className="grid grid-cols-4 gap-4 p-4">
+    <div className="h-screen w-screen flex">
       {/* Floor Plan */}
-      <div className="col-span-3 flex justify-center items-center relative">
+      <div className="flex-1">
         <svg
           ref={svgRef}
           viewBox={viewBox}
-          className="border border-gray-300 shadow-lg rounded-xl w-full h-full transition-all duration-500 ease-in-out"
+          className="w-full h-full"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
         >
+          <rect
+            width="100%"
+            height="100%"
+            fill="transparent"
+            style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+          />
           <g transform="translate(95.52219,-1.1547294)">
             {rooms.map(room => {
               const isHovered = hoveredRoom === room.id;
@@ -176,7 +222,7 @@ export default function FacilityPlan() {
       </div>
 
       {/* Side Panel */}
-      <div className="col-span-1 border-l border-gray-300 pl-4">
+      <div className="w-80 border-l border-gray-300 p-4 bg-gray-50">
         <h2 className="text-lg font-bold mb-4">Room Details</h2>
 
         {selectedRoom ? (
