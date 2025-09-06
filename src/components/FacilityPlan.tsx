@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { fetchRooms } from "../api/roomsApi";
+import { fetchMachines, createMachine, deleteMachine } from "../api/machinesApi";
 import type { Room } from "../api/roomsApi";
+import type { Machine } from "../api/machinesApi";
 
 
 
@@ -8,11 +10,15 @@ export default function FacilityPlan() {
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAddingMachine, setIsAddingMachine] = useState(false);
+  const [newMachineName, setNewMachineName] = useState('');
 
   useEffect(() => {
-    fetchRooms().then(roomsData => {
+    Promise.all([fetchRooms(), fetchMachines()]).then(([roomsData, machinesData]) => {
       setRooms(roomsData);
+      setMachines(machinesData);
       setLoading(false);
     });
   }, []);
@@ -52,7 +58,7 @@ export default function FacilityPlan() {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0) {
+    if (e.button === 0 && !isAddingMachine) {
       setIsPanning(true);
       setHasDragged(false);
       setPanStart({ x: e.clientX, y: e.clientY });
@@ -61,8 +67,40 @@ export default function FacilityPlan() {
     }
   };
 
+  const handleSvgClick = (e: React.MouseEvent) => {
+    if (!isAddingMachine || !selectedRoom || hasDragged) return;
+    
+    const svg = svgRef.current;
+    if (!svg) return;
+    
+    const rect = svg.getBoundingClientRect();
+    const [vbX, vbY, vbWidth, vbHeight] = viewBox.split(' ').map(Number);
+    
+    const x = ((e.clientX - rect.left) / rect.width) * vbWidth + vbX - 95.52219;
+    const y = ((e.clientY - rect.top) / rect.height) * vbHeight + vbY + 1.1547294;
+    
+    if (newMachineName.trim()) {
+      createMachine({
+        name: newMachineName,
+        roomId: selectedRoom.id,
+        x,
+        y
+      }).then(machine => {
+        setMachines(prev => [...prev, machine]);
+        setNewMachineName('');
+        setIsAddingMachine(false);
+      });
+    }
+  };
+
+  const handleDeleteMachine = (machineId: string) => {
+    deleteMachine(machineId).then(() => {
+      setMachines(prev => prev.filter(m => m._id !== machineId));
+    });
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning) return;
+    if (!isPanning || isAddingMachine) return;
     
     const dx = Math.abs(e.clientX - panStart.x);
     const dy = Math.abs(e.clientY - panStart.y);
@@ -122,16 +160,18 @@ export default function FacilityPlan() {
           ref={svgRef}
           viewBox={viewBox}
           className="w-full h-full"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseDown={isAddingMachine ? undefined : handleMouseDown}
+          onMouseMove={isAddingMachine ? undefined : handleMouseMove}
+          onMouseUp={isAddingMachine ? undefined : handleMouseUp}
+          onMouseLeave={isAddingMachine ? undefined : handleMouseUp}
+          onClick={isAddingMachine ? handleSvgClick : undefined}
+          style={{ cursor: isAddingMachine ? 'crosshair' : 'default' }}
         >
           <rect
             width="100%"
             height="100%"
             fill="transparent"
-            style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+            style={{ cursor: isAddingMachine ? 'crosshair' : (isPanning ? 'grabbing' : 'grab') }}
           />
           <g transform="translate(95.52219,-1.1547294)">
             {rooms.map(room => {
@@ -177,6 +217,29 @@ export default function FacilityPlan() {
                 </g>
               );
             })}
+            
+            {/* Machines */}
+            {machines.map(machine => (
+              <rect
+                key={machine._id}
+                x={machine.x - 2}
+                y={machine.y - 2}
+                width="4"
+                height="4"
+                fill="#EF4444"
+                stroke="#000"
+                strokeWidth="0.2"
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`Delete machine ${machine.name}?`)) {
+                    handleDeleteMachine(machine._id!);
+                  }
+                }}
+              >
+                <title>{machine.name}</title>
+              </rect>
+            ))}
           </g>
         </svg>
       </div>
@@ -208,10 +271,66 @@ export default function FacilityPlan() {
         <h2 className="text-lg font-bold mb-4">Room Details</h2>
 
         {selectedRoom ? (
-          <div className="p-3 rounded-xl shadow bg-gray-50">
-            <p className="text-sm text-gray-600">Selected Room</p>
-            <p className="text-xl font-semibold">{selectedRoom.name}</p>
-            <p className="text-xs text-gray-500">ID: {selectedRoom.id}</p>
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl shadow bg-gray-50">
+              <p className="text-sm text-gray-600">Selected Room</p>
+              <p className="text-xl font-semibold">{selectedRoom.name}</p>
+              <p className="text-xs text-gray-500">ID: {selectedRoom.id}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-semibold">Machines</h3>
+              {machines.filter(m => m.roomId === selectedRoom.id).map(machine => (
+                <div key={machine._id} className="flex justify-between items-center p-2 bg-gray-100 rounded">
+                  <span className="text-sm">{machine.name}</span>
+                  <button
+                    onClick={() => handleDeleteMachine(machine._id!)}
+                    className="text-red-500 hover:text-red-700 text-xs"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <div className="space-y-2">
+              {isAddingMachine ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Machine name"
+                    value={newMachineName}
+                    onChange={(e) => setNewMachineName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newMachineName.trim()) {
+                        // Ready to place - just need to click on room
+                      }
+                    }}
+                    className="w-full p-2 border rounded"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setIsAddingMachine(false);
+                        setNewMachineName('');
+                      }}
+                      className="px-3 py-1 bg-gray-300 rounded text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500">Click on the room to place the machine</p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAddingMachine(true)}
+                  className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Add Machine
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <p className="text-gray-400 italic">Click a room to see details.</p>

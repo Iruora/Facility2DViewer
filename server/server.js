@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import Room from './models/Room.js';
+import Machine from './models/Machine.js';
 
 const app = express();
 const PORT = 3001;
@@ -248,6 +249,35 @@ app.post('/api/rooms/init', async (req, res) => {
     await Room.deleteMany({});
     await Room.insertMany(roomsData);
     res.json({ message: 'Database initialized with room data' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Machine endpoints
+app.get('/api/machines', async (req, res) => {
+  try {
+    const machines = await Machine.find();
+    res.json(machines);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/machines', async (req, res) => {
+  try {
+    const machine = new Machine(req.body);
+    await machine.save();
+    res.json(machine);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/machines/:id', async (req, res) => {
+  try {
+    await Machine.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Machine deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
