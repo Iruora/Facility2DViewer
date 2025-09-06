@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { fetchRooms } from "../api/roomsApi";
-import { fetchMachines, createMachine, deleteMachine } from "../api/machinesApi";
+import { fetchMachines, createMachine, deleteMachine, updateMachine } from "../api/machinesApi";
 import type { Room } from "../api/roomsApi";
 import type { Machine } from "../api/machinesApi";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Button } from "./ui/button";
 
 
 
@@ -14,6 +17,7 @@ export default function FacilityPlan() {
   const [loading, setLoading] = useState(true);
   const [isAddingMachine, setIsAddingMachine] = useState(false);
   const [newMachineName, setNewMachineName] = useState('');
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
 
   useEffect(() => {
     Promise.all([fetchRooms(), fetchMachines()]).then(([roomsData, machinesData]) => {
@@ -84,7 +88,8 @@ export default function FacilityPlan() {
         name: newMachineName,
         roomId: selectedRoom.id,
         x,
-        y
+        y,
+        status: 'free'
       }).then(machine => {
         setMachines(prev => [...prev, machine]);
         setNewMachineName('');
@@ -97,6 +102,21 @@ export default function FacilityPlan() {
     deleteMachine(machineId).then(() => {
       setMachines(prev => prev.filter(m => m._id !== machineId));
     });
+  };
+
+  const handleMachineStatusChange = (machineId: string, status: 'free' | 'occupied' | 'broken') => {
+    updateMachine(machineId, { status }).then(updatedMachine => {
+      setMachines(prev => prev.map(m => m._id === machineId ? updatedMachine : m));
+    });
+  };
+
+  const getMachineColor = (status: string) => {
+    switch (status) {
+      case 'free': return '#10B981';
+      case 'occupied': return '#EF4444';
+      case 'broken': return '#6B7280';
+      default: return '#10B981';
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -220,25 +240,30 @@ export default function FacilityPlan() {
             
             {/* Machines */}
             {machines.map(machine => (
-              <rect
-                key={machine._id}
-                x={machine.x - 2}
-                y={machine.y - 2}
-                width="4"
-                height="4"
-                fill="#EF4444"
-                stroke="#000"
-                strokeWidth="0.2"
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`Delete machine ${machine.name}?`)) {
-                    handleDeleteMachine(machine._id!);
-                  }
-                }}
-              >
-                <title>{machine.name}</title>
-              </rect>
+              <g key={machine._id}>
+                <rect
+                  x={machine.x - 2}
+                  y={machine.y - 2}
+                  width="4"
+                  height="4"
+                  fill={getMachineColor(machine.status)}
+                  stroke="#000"
+                  strokeWidth="0.2"
+                  style={{ cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedMachine(machine);
+                  }}
+                >
+                  <title>{`${machine.name} (${machine.status})`}</title>
+                </rect>
+                {machine.status === 'broken' && (
+                  <g>
+                    <line x1={machine.x - 1.5} y1={machine.y - 1.5} x2={machine.x + 1.5} y2={machine.y + 1.5} stroke="#000" strokeWidth="0.3" />
+                    <line x1={machine.x - 1.5} y1={machine.y + 1.5} x2={machine.x + 1.5} y2={machine.y - 1.5} stroke="#000" strokeWidth="0.3" />
+                  </g>
+                )}
+              </g>
             ))}
           </g>
         </svg>
@@ -282,13 +307,31 @@ export default function FacilityPlan() {
               <h3 className="font-semibold">Machines</h3>
               {machines.filter(m => m.roomId === selectedRoom.id).map(machine => (
                 <div key={machine._id} className="flex justify-between items-center p-2 bg-gray-100 rounded">
-                  <span className="text-sm">{machine.name}</span>
-                  <button
-                    onClick={() => handleDeleteMachine(machine._id!)}
-                    className="text-red-500 hover:text-red-700 text-xs"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded ${
+                      machine.status === 'free' ? 'bg-green-500' : 
+                      machine.status === 'occupied' ? 'bg-red-500' : 'bg-gray-500'
+                    }`}></div>
+                    <span className="text-sm">{machine.name}</span>
+                    <span className="text-xs text-gray-500">({machine.status})</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <select
+                      value={machine.status}
+                      onChange={(e) => handleMachineStatusChange(machine._id!, e.target.value as any)}
+                      className="text-xs p-1 border rounded"
+                    >
+                      <option value="free">Free</option>
+                      <option value="occupied">Occupied</option>
+                      <option value="broken">Broken</option>
+                    </select>
+                    <button
+                      onClick={() => handleDeleteMachine(machine._id!)}
+                      className="text-red-500 hover:text-red-700 text-xs"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -336,6 +379,62 @@ export default function FacilityPlan() {
           <p className="text-gray-400 italic">Click a room to see details.</p>
         )}
       </div>
+
+      {/* Machine Dialog */}
+      <Dialog open={!!selectedMachine} onOpenChange={() => setSelectedMachine(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedMachine?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedMachine && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Status:</span>
+                <div className={`w-3 h-3 rounded ${
+                  selectedMachine.status === 'free' ? 'bg-green-500' : 
+                  selectedMachine.status === 'occupied' ? 'bg-red-500' : 'bg-gray-500'
+                }`}></div>
+                <span className="text-sm font-medium capitalize">{selectedMachine.status}</span>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Change Status:</label>
+                <Select
+                  value={selectedMachine.status}
+                  onValueChange={(value: 'free' | 'occupied' | 'broken') => {
+                    handleMachineStatusChange(selectedMachine._id!, value);
+                    setSelectedMachine({...selectedMachine, status: value});
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="occupied">Occupied</SelectItem>
+                    <SelectItem value="broken">Broken</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (window.confirm(`Delete machine ${selectedMachine.name}?`)) {
+                      handleDeleteMachine(selectedMachine._id!);
+                      setSelectedMachine(null);
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedMachine(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

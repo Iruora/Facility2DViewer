@@ -274,6 +274,15 @@ app.post('/api/machines', async (req, res) => {
   }
 });
 
+app.put('/api/machines/:id', async (req, res) => {
+  try {
+    const machine = await Machine.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(machine);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.delete('/api/machines/:id', async (req, res) => {
   try {
     await Machine.findByIdAndDelete(req.params.id);
