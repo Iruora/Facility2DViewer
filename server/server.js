@@ -1,11 +1,18 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
+import Room from './models/Room.js';
 
 const app = express();
 const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// MongoDB connection
+mongoose.connect('mongodb://admin:password@localhost:27017/facility?authSource=admin')
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 const roomsData = [
   {
@@ -226,8 +233,24 @@ const roomsData = [
   }
 ];
 
-app.get('/api/rooms', (req, res) => {
-  res.json(roomsData);
+app.get('/api/rooms', async (req, res) => {
+  try {
+    const rooms = await Room.find();
+    res.json(rooms);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Initialize database with room data
+app.post('/api/rooms/init', async (req, res) => {
+  try {
+    await Room.deleteMany({});
+    await Room.insertMany(roomsData);
+    res.json({ message: 'Database initialized with room data' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.listen(PORT, () => {

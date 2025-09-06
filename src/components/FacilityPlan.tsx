@@ -26,6 +26,8 @@ export default function FacilityPlan() {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const handleRoomClick = (roomId: string) => {
+    if (hasDragged) return;
+    
     const roomData = rooms.find((r) => r.id === roomId);
     if (!roomData) return;
 
@@ -141,23 +143,38 @@ export default function FacilityPlan() {
               if (isSelected) fillColor = "#10B981";
               else if (isHovered) fillColor = "#60A5FA";
               
+              const centerX = room.bbox.x + room.bbox.width / 2;
+              const centerY = room.bbox.y + room.bbox.height / 2;
+              
               return (
-                <path
-                  key={room.id}
-                  id={room.id}
-                  fill={fillColor}
-                  stroke="#000000"
-                  strokeWidth="0.529696"
-                  style={{ 
-                    cursor: "pointer", 
-                    transition: "fill 0.2s ease-in-out",
-                    animation: isFlashing ? "flash 1s ease-in-out" : "none"
-                  }}
-                  onMouseEnter={() => setHoveredRoom(room.id)}
-                  onMouseLeave={() => setHoveredRoom(null)}
-                  onClick={() => handleRoomClick(room.id)}
-                  d={room.path}
-                />
+                <g key={room.id}>
+                  <path
+                    id={room.id}
+                    fill={fillColor}
+                    stroke="#000000"
+                    strokeWidth="0.529696"
+                    style={{ 
+                      cursor: "pointer", 
+                      transition: "fill 0.2s ease-in-out",
+                      animation: isFlashing ? "flash 1s ease-in-out" : "none"
+                    }}
+                    onMouseEnter={() => setHoveredRoom(room.id)}
+                    onMouseLeave={() => setHoveredRoom(null)}
+                    onClick={() => !hasDragged && handleRoomClick(room.id)}
+                    d={room.path}
+                  />
+                  <text
+                    x={centerX}
+                    y={centerY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="3"
+                    fill="#000"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {room.name}
+                  </text>
+                </g>
               );
             })}
           </g>
