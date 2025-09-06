@@ -5,7 +5,15 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      animation: {
+        'gradient': 'gradient 3s ease infinite',
+        'float': 'float 3s ease-in-out infinite',
+      },
+      backgroundSize: {
+        '400%': '400% 400%',
+      },
+    },
   },
   plugins: [],
 }

@@ -3,11 +3,35 @@ import { fetchRooms } from "../api/roomsApi";
 import { fetchMachines, createMachine, deleteMachine, updateMachine } from "../api/machinesApi";
 import type { Room } from "../api/roomsApi";
 import type { Machine } from "../api/machinesApi";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Button } from "./ui/button";
-
-
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  Button, 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel,
+  Box,
+  Typography,
+  Chip,
+  IconButton,
+  Paper,
+  Card,
+  CardContent,
+  TextField,
+  Fab,
+  CircularProgress
+} from '@mui/material';
+import { 
+  Close as CloseIcon, 
+  Delete as DeleteIcon, 
+  Add as AddIcon,
+  ZoomIn,
+  ZoomOut,
+  Home,
+  Settings
+} from '@mui/icons-material';
 
 export default function FacilityPlan() {
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
@@ -26,6 +50,7 @@ export default function FacilityPlan() {
       setLoading(false);
     });
   }, []);
+  
   const [viewBox, setViewBox] = useState<string>("0 0 285.43249 257.8024");
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
@@ -47,7 +72,6 @@ export default function FacilityPlan() {
     if (room?.bbox) {
       const bbox = room.bbox;
       const padding = 20;
-      // Account for the transform="translate(95.52219,-1.1547294)"
       const x = bbox.x + 95.52219 - padding;
       const y = bbox.y - 1.1547294 - padding;
       const width = bbox.width + padding * 2;
@@ -55,7 +79,6 @@ export default function FacilityPlan() {
 
       setViewBox(`${x} ${y} ${width} ${height}`);
       
-      // Flash the selected room
       setFlashingRoom(roomId);
       setTimeout(() => setFlashingRoom(null), 1000);
     }
@@ -112,10 +135,10 @@ export default function FacilityPlan() {
 
   const getMachineColor = (status: string) => {
     switch (status) {
-      case 'free': return '#10B981';
-      case 'occupied': return '#EF4444';
-      case 'broken': return '#6B7280';
-      default: return '#10B981';
+      case 'free': return '#4caf50';
+      case 'occupied': return '#ff9800';
+      case 'broken': return '#f44336';
+      default: return '#4caf50';
     }
   };
 
@@ -166,26 +189,49 @@ export default function FacilityPlan() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center">
-        <div className="text-xl">Loading rooms...</div>
-      </div>
+      <Box sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#fafafa'
+      }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={60} sx={{ color: '#1976d2', mb: 2 }} />
+          <Typography variant="h6" color="text.primary">Loading Facility Management System...</Typography>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="h-screen w-screen flex p-8">
-      {/* Floor Plan */}
-      <div className="flex-1 border-2 border-gray-400 rounded-lg shadow-xl bg-gray-50 mr-4 p-4">
+    <Box sx={{ 
+      height: '100vh', 
+      width: '100vw', 
+      display: 'flex', 
+      p: 2, 
+      background: '#fafafa',
+      gap: 2
+    }}>
+      <Paper sx={{ 
+        flex: 1, 
+        borderRadius: 1, 
+        background: '#ffffff',
+        p: 2,
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+        border: '1px solid #e0e0e0'
+      }}>
         <svg
           ref={svgRef}
           viewBox={viewBox}
-          className="w-full h-full"
+          style={{ width: '100%', height: '100%' }}
           onMouseDown={isAddingMachine ? undefined : handleMouseDown}
           onMouseMove={isAddingMachine ? undefined : handleMouseMove}
           onMouseUp={isAddingMachine ? undefined : handleMouseUp}
           onMouseLeave={isAddingMachine ? undefined : handleMouseUp}
           onClick={isAddingMachine ? handleSvgClick : undefined}
-          style={{ cursor: isAddingMachine ? 'crosshair' : 'default' }}
         >
           <rect
             width="100%"
@@ -199,9 +245,9 @@ export default function FacilityPlan() {
               const isFlashing = flashingRoom === room.id;
               const isSelected = selectedRoom?.id === room.id;
               
-              let fillColor = "#D1D5DB";
-              if (isSelected) fillColor = "#10B981";
-              else if (isHovered) fillColor = "#60A5FA";
+              let fillColor = "#f5f5f5";
+              if (isSelected) fillColor = "#e3f2fd";
+              else if (isHovered) fillColor = "#fff3e0";
               
               const centerX = room.bbox.x + room.bbox.width / 2;
               const centerY = room.bbox.y + room.bbox.height / 2;
@@ -211,8 +257,8 @@ export default function FacilityPlan() {
                   <path
                     id={room.id}
                     fill={fillColor}
-                    stroke="#000000"
-                    strokeWidth="0.529696"
+                    stroke="#424242"
+                    strokeWidth="0.5"
                     style={{ 
                       cursor: "pointer", 
                       transition: "fill 0.2s ease-in-out",
@@ -228,9 +274,9 @@ export default function FacilityPlan() {
                     y={centerY}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize="3"
-                    fill="#000"
-                    style={{ pointerEvents: "none", userSelect: "none" }}
+                    fontSize="2.5"
+                    fill="#424242"
+                    style={{ pointerEvents: "none", userSelect: "none", fontFamily: 'Roboto, sans-serif' }}
                   >
                     {room.name}
                   </text>
@@ -238,7 +284,6 @@ export default function FacilityPlan() {
               );
             })}
             
-            {/* Machines */}
             {machines.map(machine => (
               <g key={machine._id}>
                 <rect
@@ -247,7 +292,7 @@ export default function FacilityPlan() {
                   width="4"
                   height="4"
                   fill={getMachineColor(machine.status)}
-                  stroke="#000"
+                  stroke="#424242"
                   strokeWidth="0.2"
                   style={{ cursor: 'pointer' }}
                   onClick={(e) => {
@@ -259,182 +304,246 @@ export default function FacilityPlan() {
                 </rect>
                 {machine.status === 'broken' && (
                   <g>
-                    <line x1={machine.x - 1.5} y1={machine.y - 1.5} x2={machine.x + 1.5} y2={machine.y + 1.5} stroke="#000" strokeWidth="0.3" />
-                    <line x1={machine.x - 1.5} y1={machine.y + 1.5} x2={machine.x + 1.5} y2={machine.y - 1.5} stroke="#000" strokeWidth="0.3" />
+                    <line x1={machine.x - 1.5} y1={machine.y - 1.5} x2={machine.x + 1.5} y2={machine.y + 1.5} stroke="#424242" strokeWidth="0.3" />
+                    <line x1={machine.x - 1.5} y1={machine.y + 1.5} x2={machine.x + 1.5} y2={machine.y - 1.5} stroke="#424242" strokeWidth="0.3" />
                   </g>
                 )}
               </g>
             ))}
           </g>
         </svg>
-      </div>
+      </Paper>
 
-      {/* Floating Zoom Controls */}
-      <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50 p-4 bg-white rounded-2xl shadow-xl m-5" style={{ margin: '20px' }}>
-        <button
-          className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 rounded-full shadow-lg flex items-center justify-center text-xl font-bold text-white hover:shadow-xl transition-all transform hover:scale-105"
-          onClick={zoomIn}
-        >
-          +
-        </button>
-        <button
-          className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 hover:from-blue-500 hover:to-blue-700 rounded-full shadow-lg flex items-center justify-center text-xl font-bold text-white hover:shadow-xl transition-all transform hover:scale-105"
-          onClick={zoomOut}
-        >
-          −
-        </button>
-        <button
-          className="w-14 h-14 bg-gradient-to-br from-gray-400 to-gray-600 hover:from-gray-500 hover:to-gray-700 rounded-full shadow-lg flex items-center justify-center text-lg font-bold text-white hover:shadow-xl transition-all transform hover:scale-105"
-          onClick={resetView}
-        >
-          ⌂
-        </button>
-      </div>
+      <Box sx={{ 
+        position: 'fixed', 
+        bottom: 24, 
+        right: 24, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 1, 
+        zIndex: 1000 
+      }}>
+        <Fab size="small" onClick={zoomIn} sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}>
+          <ZoomIn />
+        </Fab>
+        <Fab size="small" onClick={zoomOut} sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}>
+          <ZoomOut />
+        </Fab>
+        <Fab size="small" onClick={resetView} sx={{ bgcolor: '#757575', '&:hover': { bgcolor: '#616161' } }}>
+          <Home />
+        </Fab>
+      </Box>
 
-      {/* Side Panel */}
-      <div className="w-80 border border-gray-300 rounded-lg shadow-lg p-4 bg-gray-50">
-        <h2 className="text-lg font-bold mb-4">Room Details</h2>
+      <Paper sx={{ 
+        width: 380, 
+        borderRadius: 1, 
+        background: '#ffffff',
+        p: 3,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+        border: '1px solid #e0e0e0'
+      }}>
+        <Typography variant="h5" sx={{ 
+          mb: 3, 
+          color: '#1976d2',
+          fontWeight: 500,
+          borderBottom: '1px solid #e0e0e0',
+          pb: 2
+        }}>
+          Facility Management
+        </Typography>
 
         {selectedRoom ? (
-          <div className="space-y-4">
-            <div className="p-3 rounded-xl shadow bg-gray-50">
-              <p className="text-sm text-gray-600">Selected Room</p>
-              <p className="text-xl font-semibold">{selectedRoom.name}</p>
-              <p className="text-xs text-gray-500">ID: {selectedRoom.id}</p>
-            </div>
+          <Box>
+            <Card sx={{ mb: 3, bgcolor: '#1976d2', color: 'white' }}>
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="caption" sx={{ opacity: 0.9 }}>Selected Room</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 500, my: 0.5 }}>{selectedRoom.name}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>ID: {selectedRoom.id}</Typography>
+              </CardContent>
+            </Card>
             
-            <div className="space-y-2">
-              <h3 className="font-semibold">Machines</h3>
-              {machines.filter(m => m.roomId === selectedRoom.id).map(machine => (
-                <div key={machine._id} className="flex justify-between items-center p-2 bg-gray-100 rounded">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded ${
-                      machine.status === 'free' ? 'bg-green-500' : 
-                      machine.status === 'occupied' ? 'bg-red-500' : 'bg-gray-500'
-                    }`}></div>
-                    <span className="text-sm">{machine.name}</span>
-                    <span className="text-xs text-gray-500">({machine.status})</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <select
-                      value={machine.status}
-                      onChange={(e) => handleMachineStatusChange(machine._id!, e.target.value as any)}
-                      className="text-xs p-1 border rounded"
-                    >
-                      <option value="free">Free</option>
-                      <option value="occupied">Occupied</option>
-                      <option value="broken">Broken</option>
-                    </select>
-                    <button
-                      onClick={() => handleDeleteMachine(machine._id!)}
-                      className="text-red-500 hover:text-red-700 text-xs"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#424242', fontWeight: 500 }}>
+              <Settings color="primary" /> Equipment
+            </Typography>
             
-            <div className="space-y-2">
-              {isAddingMachine ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Machine name"
-                    value={newMachineName}
-                    onChange={(e) => setNewMachineName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newMachineName.trim()) {
-                        // Ready to place - just need to click on room
-                      }
-                    }}
-                    className="w-full p-2 border rounded"
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setIsAddingMachine(false);
-                        setNewMachineName('');
-                      }}
-                      className="px-3 py-1 bg-gray-300 rounded text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500">Click on the room to place the machine</p>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsAddingMachine(true)}
-                  className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Add Machine
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="text-gray-400 italic">Click a room to see details.</p>
-        )}
-      </div>
-
-      {/* Machine Dialog */}
-      <Dialog open={!!selectedMachine} onOpenChange={() => setSelectedMachine(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedMachine?.name}</DialogTitle>
-          </DialogHeader>
-          {selectedMachine && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Status:</span>
-                <div className={`w-3 h-3 rounded ${
-                  selectedMachine.status === 'free' ? 'bg-green-500' : 
-                  selectedMachine.status === 'occupied' ? 'bg-red-500' : 'bg-gray-500'
-                }`}></div>
-                <span className="text-sm font-medium capitalize">{selectedMachine.status}</span>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Change Status:</label>
-                <Select
-                  value={selectedMachine.status}
-                  onValueChange={(value: 'free' | 'occupied' | 'broken') => {
-                    handleMachineStatusChange(selectedMachine._id!, value);
-                    setSelectedMachine({...selectedMachine, status: value});
+            {machines.filter(m => m.roomId === selectedRoom.id).map(machine => (
+              <Card key={machine._id} sx={{ mb: 1.5, '&:hover': { boxShadow: 2 }, transition: 'all 0.2s', border: '1px solid #e0e0e0' }}>
+                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Chip 
+                        size="small" 
+                        label={machine.status}
+                        color={machine.status === 'free' ? 'success' : machine.status === 'occupied' ? 'warning' : 'error'}
+                        variant="outlined"
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{machine.name}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <FormControl size="small" sx={{ minWidth: 90 }}>
+                        <Select
+                          value={machine.status}
+                          onChange={(e) => handleMachineStatusChange(machine._id!, e.target.value as any)}
+                          size="small"
+                          variant="outlined"
+                        >
+                          <MenuItem value="free">Available</MenuItem>
+                          <MenuItem value="occupied">In Use</MenuItem>
+                          <MenuItem value="broken">Maintenance</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteMachine(machine._id!)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+            
+            {isAddingMachine ? (
+              <Box sx={{ mt: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Equipment Name"
+                  value={newMachineName}
+                  onChange={(e) => setNewMachineName(e.target.value)}
+                  autoFocus
+                  sx={{ mb: 2 }}
+                  variant="outlined"
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setIsAddingMachine(false);
+                    setNewMachineName('');
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="occupied">Occupied</SelectItem>
-                    <SelectItem value="broken">Broken</SelectItem>
-                  </SelectContent>
+                  Cancel
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Click on the room to place the equipment
+                </Typography>
+              </Box>
+            ) : (
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setIsAddingMachine(true)}
+                sx={{ 
+                  mt: 2,
+                  bgcolor: '#1976d2',
+                  '&:hover': { bgcolor: '#1565c0' },
+                  py: 1.5,
+                  fontWeight: 500
+                }}
+              >
+                Add Equipment
+              </Button>
+            )}
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <Settings sx={{ fontSize: 64, color: '#bdbdbd', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>Select a Room</Typography>
+            <Typography variant="body2" color="text.disabled">Click on any room to view and manage equipment</Typography>
+          </Box>
+        )}
+      </Paper>
+
+      <Dialog 
+        open={!!selectedMachine} 
+        onClose={() => setSelectedMachine(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            border: '1px solid #e0e0e0'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2, 
+          pb: 1, 
+          bgcolor: '#f5f5f5', 
+          borderBottom: '1px solid #e0e0e0',
+          color: '#1976d2',
+          fontWeight: 500
+        }}>
+          <Settings color="primary" />
+          {selectedMachine?.name}
+          <IconButton 
+            onClick={() => setSelectedMachine(null)}
+            sx={{ ml: 'auto' }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          {selectedMachine && (
+            <Box>
+              <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Current Status</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Chip 
+                    label={selectedMachine.status}
+                    color={selectedMachine.status === 'free' ? 'success' : selectedMachine.status === 'occupied' ? 'warning' : 'error'}
+                    size="small"
+                  />
+                  <Typography variant="h6" color="text.primary" sx={{ textTransform: 'capitalize', fontWeight: 500 }}>
+                    {selectedMachine.status}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel>Update Status</InputLabel>
+                <Select
+                  value={selectedMachine.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value as 'free' | 'occupied' | 'broken';
+                    handleMachineStatusChange(selectedMachine._id!, newStatus);
+                    setSelectedMachine({...selectedMachine, status: newStatus});
+                  }}
+                  label="Update Status"
+                >
+                  <MenuItem value="free">Available</MenuItem>
+                  <MenuItem value="occupied">In Use</MenuItem>
+                  <MenuItem value="broken">Maintenance Required</MenuItem>
                 </Select>
-              </div>
-              <div className="flex gap-2 pt-2">
+              </FormControl>
+              
+              <Box sx={{ display: 'flex', gap: 2 }}>
                 <Button
-                  variant="destructive"
+                  variant="contained"
+                  color="error"
+                  startIcon={<DeleteIcon />}
                   onClick={() => {
-                    if (window.confirm(`Delete machine ${selectedMachine.name}?`)) {
+                    if (window.confirm(`Delete equipment ${selectedMachine.name}?`)) {
                       handleDeleteMachine(selectedMachine._id!);
                       setSelectedMachine(null);
                     }
                   }}
+                  sx={{ flex: 1 }}
                 >
                   Delete
                 </Button>
-                <Button variant="outline" onClick={() => setSelectedMachine(null)}>
+                <Button 
+                  variant="outlined" 
+                  onClick={() => setSelectedMachine(null)}
+                  sx={{ flex: 1 }}
+                >
                   Close
                 </Button>
-              </div>
-            </div>
+              </Box>
+            </Box>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </Box>
   );
 }
