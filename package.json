@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "cd server && npm run dev",
+    "server": "cd server && yarn dev",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
     "start": "concurrently \"npm run server\" \"npm run dev\""
