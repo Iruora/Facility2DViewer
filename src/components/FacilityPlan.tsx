@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { fetchRooms } from "../api/roomsApi";
+import { fetchRooms, updateRoomPosition } from "../api/roomsApi";
 import { fetchMachines, createMachine, deleteMachine, updateMachine } from "../api/machinesApi";
 import type { Room } from "../api/roomsApi";
 import type { Machine } from "../api/machinesApi";
@@ -50,6 +50,8 @@ export default function FacilityPlan() {
       setLoading(false);
     });
   }, []);
+
+
   
   const [viewBox, setViewBox] = useState<string>("0 0 285.43249 257.8024");
   const [isPanning, setIsPanning] = useState(false);
@@ -57,6 +59,9 @@ export default function FacilityPlan() {
   const [viewBoxStart, setViewBoxStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [hasDragged, setHasDragged] = useState(false);
   const [flashingRoom, setFlashingRoom] = useState<string | null>(null);
+  const [isDraggingMachine, setIsDraggingMachine] = useState(false);
+  const [draggedMachine, setDraggedMachine] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -85,13 +90,64 @@ export default function FacilityPlan() {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 && !isAddingMachine) {
+    if (e.button === 0 && !isAddingMachine && !isDraggingMachine) {
       setIsPanning(true);
       setHasDragged(false);
       setPanStart({ x: e.clientX, y: e.clientY });
       const [x, y, width, height] = viewBox.split(' ').map(Number);
       setViewBoxStart({ x, y, width, height });
     }
+  };
+
+  const handleMachineMouseDown = (e: React.MouseEvent, machineId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingMachine(true);
+    setDraggedMachine(machineId);
+    setHasDragged(false);
+    
+    const svg = svgRef.current;
+    if (!svg) return;
+    
+    const rect = svg.getBoundingClientRect();
+    const [vbX, vbY, vbWidth, vbHeight] = viewBox.split(' ').map(Number);
+    
+    const svgX = ((e.clientX - rect.left) / rect.width) * vbWidth + vbX - 95.52219;
+    const svgY = ((e.clientY - rect.top) / rect.height) * vbHeight + vbY + 1.1547294;
+    
+    const machine = machines.find(m => m._id === machineId);
+    if (machine) {
+      setDragOffset({ x: svgX - machine.x, y: svgY - machine.y });
+    }
+  };
+
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(null, args), wait);
+    };
+  };
+
+  const debouncedUpdateMachinePosition = debounce((machineId: string, x: number, y: number) => {
+    updateMachine(machineId, { x, y });
+  }, 500);
+
+  const isPointInRoom = (x: number, y: number, roomId: string): boolean => {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room || !svgRef.current) return false;
+    
+    // Find the actual path element in the DOM
+    const pathElement = svgRef.current.querySelector(`#${roomId}`) as SVGPathElement;
+    if (!pathElement) return false;
+    
+    // Create SVG point for testing
+    const point = svgRef.current.createSVGPoint();
+    point.x = x;
+    point.y = y;
+    
+    // Test if point is inside the path
+    return pathElement.isPointInFill(point);
   };
 
   const handleSvgClick = (e: React.MouseEvent) => {
@@ -143,6 +199,33 @@ export default function FacilityPlan() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDraggingMachine && draggedMachine) {
+      setHasDragged(true);
+      const svg = svgRef.current;
+      if (!svg) return;
+      
+      const rect = svg.getBoundingClientRect();
+      const [vbX, vbY, vbWidth, vbHeight] = viewBox.split(' ').map(Number);
+      
+      const svgX = ((e.clientX - rect.left) / rect.width) * vbWidth + vbX - 95.52219;
+      const svgY = ((e.clientY - rect.top) / rect.height) * vbHeight + vbY + 1.1547294;
+      
+      const newX = svgX - dragOffset.x;
+      const newY = svgY - dragOffset.y;
+      
+      const machine = machines.find(m => m._id === draggedMachine);
+      if (machine) {
+        if (isPointInRoom(newX, newY, machine.roomId)) {
+          setMachines(prev => prev.map(m => 
+            m._id === draggedMachine 
+              ? { ...m, x: newX, y: newY }
+              : m
+          ));
+        }
+      }
+      return;
+    }
+    
     if (!isPanning || isAddingMachine) return;
     
     const dx = Math.abs(e.clientX - panStart.x);
@@ -161,7 +244,15 @@ export default function FacilityPlan() {
   };
 
   const handleMouseUp = () => {
+    if (isDraggingMachine && draggedMachine) {
+      const machine = machines.find(m => m._id === draggedMachine);
+      if (machine) {
+        updateMachine(draggedMachine, { x: machine.x, y: machine.y });
+      }
+    }
     setIsPanning(false);
+    setIsDraggingMachine(false);
+    setDraggedMachine(null);
   };
 
   const zoomIn = () => {
@@ -284,32 +375,38 @@ export default function FacilityPlan() {
               );
             })}
             
-            {machines.map(machine => (
-              <g key={machine._id}>
-                <rect
-                  x={machine.x - 2}
-                  y={machine.y - 2}
-                  width="4"
-                  height="4"
-                  fill={getMachineColor(machine.status)}
-                  stroke="#424242"
-                  strokeWidth="0.2"
-                  style={{ cursor: 'pointer' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedMachine(machine);
-                  }}
-                >
-                  <title>{`${machine.name} (${machine.status})`}</title>
-                </rect>
-                {machine.status === 'broken' && (
-                  <g>
-                    <line x1={machine.x - 1.5} y1={machine.y - 1.5} x2={machine.x + 1.5} y2={machine.y + 1.5} stroke="#424242" strokeWidth="0.3" />
-                    <line x1={machine.x - 1.5} y1={machine.y + 1.5} x2={machine.x + 1.5} y2={machine.y - 1.5} stroke="#424242" strokeWidth="0.3" />
-                  </g>
-                )}
-              </g>
-            ))}
+            {machines.map(machine => {
+              const isDragged = draggedMachine === machine._id;
+              return (
+                <g key={machine._id}>
+                  <rect
+                    x={machine.x - 2}
+                    y={machine.y - 2}
+                    width="4"
+                    height="4"
+                    fill={getMachineColor(machine.status)}
+                    stroke={isDragged ? "#1976d2" : "#424242"}
+                    strokeWidth={isDragged ? "0.4" : "0.2"}
+                    style={{ cursor: isDraggingMachine ? 'grabbing' : 'move' }}
+                    onMouseDown={(e) => handleMachineMouseDown(e, machine._id!)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!hasDragged) {
+                        setSelectedMachine(machine);
+                      }
+                    }}
+                  >
+                    <title>{`${machine.name} (${machine.status}) - Drag to move`}</title>
+                  </rect>
+                  {machine.status === 'broken' && (
+                    <g>
+                      <line x1={machine.x - 1.5} y1={machine.y - 1.5} x2={machine.x + 1.5} y2={machine.y + 1.5} stroke="#424242" strokeWidth="0.3" />
+                      <line x1={machine.x - 1.5} y1={machine.y + 1.5} x2={machine.x + 1.5} y2={machine.y - 1.5} stroke="#424242" strokeWidth="0.3" />
+                    </g>
+                  )}
+                </g>
+              );
+            })}
           </g>
         </svg>
       </Paper>
@@ -448,6 +545,7 @@ export default function FacilityPlan() {
             <Settings sx={{ fontSize: 64, color: '#bdbdbd', mb: 2 }} />
             <Typography variant="h6" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>Select a Room</Typography>
             <Typography variant="body2" color="text.disabled">Click on any room to view and manage equipment</Typography>
+            <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 2 }}>Drag machines to move them within rooms</Typography>
           </Box>
         )}
       </Paper>

@@ -292,6 +292,21 @@ app.delete('/api/machines/:id', async (req, res) => {
   }
 });
 
+// Update room position
+app.put('/api/rooms/:id/position', async (req, res) => {
+  try {
+    const { x, y } = req.body;
+    const room = await Room.findOneAndUpdate(
+      { id: req.params.id },
+      { $set: { 'position.x': x, 'position.y': y } },
+      { new: true }
+    );
+    res.json(room);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

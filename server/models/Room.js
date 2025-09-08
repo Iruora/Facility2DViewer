@@ -9,6 +9,10 @@ const roomSchema = new mongoose.Schema({
     y: { type: Number, required: true },
     width: { type: Number, required: true },
     height: { type: Number, required: true }
+  },
+  position: {
+    x: { type: Number, default: 0 },
+    y: { type: Number, default: 0 }
   }
 });
 
